@@ -1,0 +1,57 @@
+//this var comes from the vertex shader
+varying vec2 v_coord;
+varying vec3 v_wPos;
+
+//the texture passed from the application
+uniform sampler2D color_texture;
+uniform sampler2D normals_texture;
+
+uniform vec3 mat_ambient;
+uniform vec3 mat_specular;
+uniform vec3 mat_diffuse;
+
+uniform vec3 eye_pos;
+uniform float alfa;
+
+uniform vec3 light_pos;
+uniform vec3 light_ambient;
+uniform vec3 light_diffuse;
+uniform vec3 light_specular;
+
+void main()
+{
+	//read the pixel RGBA from the texture at the position v_coord
+	vec4 color = texture2D( color_texture, v_coord );
+	vec4 normal = texture2D( normals_texture, v_coord );
+	vec3 v_wNormal = (normal.xyz * 2) - 1; // Passem la Normal a (-1, 1)
+	v_wNormal = normalize( v_wNormal );
+
+	// Calculem la llum ambient
+	vec3 ambient = color.xyz * mat_ambient * light_ambient;
+	ambient = clamp(ambient, 0, 1);
+	
+	// Calculem els diferents vectors que utilitzarem més tard
+	vec3 l = normalize( light_pos - v_wPos );
+	vec3 v = normalize( eye_pos - v_wPos );
+	vec3 aux = ( v_wPos - light_pos );
+	vec3 r = normalize( reflect(aux, v_wNormal) );
+	
+	// Calculem la llum difusa
+	float ln = dot( l, v_wNormal );
+	ln = clamp( ln, 0, 1 );
+	vec3 diffuse = color.xyz * mat_diffuse * ln * light_diffuse;
+
+	// Calculem la llum especular
+	float rv = dot(r, v);
+	rv = clamp(rv, 0, 1);
+	rv = pow(rv, alfa);
+	vec3 specular = color.xyz * color.w * mat_specular * rv * light_specular;
+	specular = clamp(specular, 0, 1);
+
+	// Calculem el resultat de les llums
+	vec3 light_inten = ambient + diffuse + specular;
+	light_inten = clamp(light_inten, 0, 1);
+
+	//assign the color to the output
+	gl_FragColor = vec4(light_inten, 1.0); //color;
+}
